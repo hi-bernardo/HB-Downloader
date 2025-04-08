@@ -1,0 +1,5 @@
+.idea
+build
+HB_Downloader.spec
+dist/HB_Downloader.exe
+ffmpeg.exe

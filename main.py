@@ -8,9 +8,9 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtGui import QIcon, QFontDatabase, QFont
 from PyQt5.QtWidgets import QMessageBox, QApplication
 
-APP_VERSION = "1.0.0"
-VERSION_URL = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/updates/latest_version.txt"
-DOWNLOAD_URL = "https://github.com/SEU_USUARIO/SEU_REPOSITORIO/releases/latest"
+APP_VERSION = "1.0.2"
+VERSION_URL = "https://raw.githubusercontent.com/hi-bernardo/HB-Downloader/main/src/latest_version.txt"
+EXECUTABLE_URL = "https://github.com/hi-bernardo/HB-Downloader/releases/download/v1/HB_Downloader.exe"
 
 
 def check_for_updates():
@@ -29,10 +29,49 @@ def show_update_popup(latest_version):
     msg.setIcon(QMessageBox.Information)
     msg.setWindowTitle("Atualização disponível")
     msg.setText(f"Uma nova versão ({latest_version}) está disponível!")
-    msg.setInformativeText("Deseja ir até a página de download?")
+    msg.setInformativeText("Deseja baixar e instalar agora?")
     msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
     if msg.exec_() == QMessageBox.Yes:
-        webbrowser.open(DOWNLOAD_URL)
+        download_and_replace_executable()
+
+
+def download_and_replace_executable():
+    try:
+        current_path = os.path.realpath(sys.argv[0])
+        temp_path = current_path + ".new"
+
+        response = requests.get(EXECUTABLE_URL, stream=True)
+        total = int(response.headers.get('content-length', 0))
+        downloaded = 0
+
+        with open(temp_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    done = int(50 * downloaded / total)
+                    print(f"\r[{'=' * done}{' ' * (50 - done)}] {int(downloaded / total * 100)}%", end='')
+
+        print("\nDownload concluído. Atualizando...")
+
+        bat_script = f"""
+        @echo off
+        timeout /t 1 > NUL
+        taskkill /f /pid {os.getpid()}
+        move /Y "{temp_path}" "{current_path}"
+        start "" "{current_path}"
+        exit
+        """
+        bat_path = os.path.join(os.path.dirname(current_path), "update.bat")
+        with open(bat_path, 'w') as bat_file:
+            bat_file.write(bat_script)
+
+        os.startfile(bat_path)
+        sys.exit(0)
+
+    except Exception as e:
+        QMessageBox.critical(None, "Erro na atualização", f"Erro ao baixar nova versão:\n{e}")
 
 
 def resource_path(relative_path):
@@ -281,7 +320,7 @@ class DownloaderUI(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout(self)
 
         self.url_input = QtWidgets.QLineEdit()
-        self.url_input.setPlaceholderText("Cole a URL aqui")
+        self.url_input.setPlaceholderText("V1.0.2")
         self.url_input.textChanged.connect(self.on_url_change)
 
         self.btn_paste = QtWidgets.QPushButton("")
